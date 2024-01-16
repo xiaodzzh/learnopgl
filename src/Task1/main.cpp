@@ -243,7 +243,13 @@ int main(int argc, char*argv[])
 		0.5f, -0.5f, 0.0f,
 		0.0f,  0.5f, 0.0f
 	};
-
+	float vertices1[] = {
+		0.5f, 1.0f, 0.0f,   // 右上角
+		0.5f, 0.5f, 0.0f,  // 右下角
+		-0.5f, 0.5f, 0.0f, // 左下角
+		-0.5f, 1.0f, 0.0f   // 左上角
+	};
+	unsigned int indices[] = { 0,1,3,1,2,3 };
 	//----------编译着色器--------------
 	//顶点着色器
 	const char* verticeShaderSoure = "#version 330 core\n"
@@ -317,19 +323,36 @@ int main(int argc, char*argv[])
 	glDeleteShader(fragShader);
 
 	//VAO顶点数组对象创建
-	unsigned int VAO;
-	glGenVertexArrays(1, &VAO);
+	unsigned int VAO[2];
+	glGenVertexArrays(2, VAO);
 
 	//VBO顶点缓冲对象创建
-	unsigned int VBO;
-	glGenBuffers(1, &VBO);
+	unsigned int VBO[2];
+	glGenBuffers(2, VBO);
+	unsigned int EBO;
+	glGenBuffers(1, &EBO);
 
-	glBindVertexArray(VAO);
+
+	glBindVertexArray(VAO[0]);
 	//缓冲类型绑定
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+	
 	//将顶点数据绑定到缓冲对象
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	//设置顶点属性指针
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	glBindVertexArray(VAO[1]);
+	//缓冲类型绑定
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices1), vertices1, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	//
 	//glUseProgram(shaderProgram);
@@ -339,14 +362,9 @@ int main(int argc, char*argv[])
 	glEnableVertexAttribArray(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	// remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
 	glBindVertexArray(0);
-
+	
+	glUseProgram(shaderProgram);
 	while (!glfwWindowShouldClose(window))
 	{
 		// Start the Dear ImGui frame 启动IMgui Frame框架.
@@ -388,8 +406,12 @@ int main(int argc, char*argv[])
 		glClear(GL_COLOR_BUFFER_BIT);
 		
 		glUseProgram(shaderProgram);
-		glBindVertexArray(VAO);
+		glBindVertexArray(VAO[0]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+		//glBindVertexArray(0);
+		glBindVertexArray(VAO[1]);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		//glBindVertexArray(0);
 		//glfwSwapBuffers(window);
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData()); //必须在绘制完Open之后接着绘制Imgui
 	}
@@ -398,8 +420,9 @@ int main(int argc, char*argv[])
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
+	glDeleteVertexArrays(1, &VAO[0]);
+	glDeleteBuffers(1, &VBO[0]);
+	glDeleteBuffers(1, &VBO[1]);
 
 	glfwTerminate();
 	return 0;
