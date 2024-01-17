@@ -253,6 +253,27 @@ function(create_project_from_sources chapter)
              "src/${chapter}/*.gs"
              "src/${chapter}/*.cs"
     )
+	
+	file(GLOB IMGS
+             "src/${chapter}/*.jpg"
+             # "src/${chapter}/${demo}/*.frag"
+             "src/${chapter}/*.png"
+             "src/${chapter}/*.bmp"
+    )
+	
+	foreach(IMG ${IMGS})
+        if(WIN32)
+            # configure_file(${IMG} "test")
+            add_custom_command(TARGET ${NAME} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${IMG} $<TARGET_FILE_DIR:${NAME}>)
+        elseif(UNIX AND NOT APPLE)
+            file(COPY ${IMG} DESTINATION ${CMAKE_SOURCE_DIR}/bin/${chapter})
+        elseif(APPLE)
+            # create symbolic link for *.vs *.fs *.gs
+            get_filename_component(IMGNAME ${IMG} NAME)
+            makeLink(${IMG} ${CMAKE_SOURCE_DIR}/bin/${chapter}/${IMGNAME} ${NAME})
+        endif(WIN32)
+    endforeach(IMG)
+	
 	# copy dlls
 	file(GLOB DLLS "dlls/*.dll")
     foreach(SHADER ${SHADERS})
