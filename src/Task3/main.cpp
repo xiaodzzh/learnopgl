@@ -51,10 +51,10 @@ int main(int argc, char*argv[])
 	//矩形顶点坐标
 	float vertices1[] = {
 		//     ---- 位置 ----       ---- 颜色 ----     - 纹理坐标 -
-		0.5f,  0.8f, 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f,   // 右上
-		0.5f, -0.8f, 0.0f,   0.0f, 1.0f, 0.0f,   0.0f, 2.0f,   // 右下
-		-0.5f, -0.8f, 0.0f,   0.0f, 0.0f, 1.0f,   2.0f, 2.0f,   // 左下
-		-0.5f,  0.8f, 0.0f,   1.0f, 1.0f, 0.0f,   2.0f, 0.0f    // 左上
+		0.5f,  0.9f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // 右上
+		0.5f, -0.9f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // 右下
+		-0.5f, -0.9f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // 左下
+		-0.5f,  0.9f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 左上
 	};
 	unsigned int indices[] = { 0,1,3,1,2,3 };
 #if 0
@@ -136,6 +136,8 @@ int main(int argc, char*argv[])
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragShader);
 #endif
+	stbi_set_flip_vertically_on_load(true);
+
 	//VAO顶点数组对象创建
 	unsigned int VAO[2];
 	glGenVertexArrays(2, VAO);
@@ -355,7 +357,7 @@ int main(int argc, char*argv[])
 		}
 #endif
 
-		
+
 		rtshader->setFloat("mixseed", seed, 2);
 		int index1[1] = { 0 };
 		int index2[1] = { 1 };

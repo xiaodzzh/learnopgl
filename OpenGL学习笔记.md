@@ -249,5 +249,71 @@ glDeleteShader(fshader);
 
 #### 4.纹理
 
+###### （1）添加纹理流程
 
+​	创建纹理->绑定纹理->设置纹理->生成纹理->使用纹理
 
+```
+//记得在显示图片前翻转图片，因为opengl y轴坐标方式与图片y轴坐标方式不一致,opengl认为0,0因该在图片的底部，而图片认为是在顶部
+stbi_set_flip_vertically_on_load(true);
+
+//创建纹理
+unsigned int textures[2];
+glGenTextures(2, textures);
+
+//绑定纹理
+glBindTexture(GL_TEXTURE_2D, textures[0]);
+
+//设置纹理
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+//生成纹理
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+int width, height, nrChannels;
+unsigned char *data = stbi_load("./39.jpg", &width, &height, &nrChannels, 0);
+if (data)
+{
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+//释放内存
+stb_image_free(data);
+
+//使用纹理，如果设置纹理单元，需激活纹理单元
+glActiveTexture(GL_TEXTURE0);
+glBindTexture(GL_TEXTURE_2D, textures[0]);
+glActiveTexture(GL_TEXTURE1);
+glBindTexture(GL_TEXTURE_2D, textures[1]);
+
+int index1[1] = { 0 };
+int index2[1] = { 1 };
+rtshader->setInt("texture1", index1, 1);
+rtshader->setInt("texture2", index2, 1);
+```
+
+###### （2）纹理单元
+
+​	一个物体可能不止拥有一个纹理，如果当一个物体设置了多个纹理的时候，就需要用到纹理单元，首先来看下使用纹理的片段着色器shader:
+
+```
+#version 330 core
+out vec4 FragColor;
+uniform vec4 clear_color;
+uniform vec2 mixseed;
+in vec2 out_texture;
+uniform sampler2D texture1;
+uniform sampler2D texture2;
+void main()
+{
+   FragColor = mix(texture(texture1, out_texture) * clear_color, texture(texture2, out_texture) * clear_color, mixseed.x);
+}
+```
+
+​	我们定义了两个纹理单元texture1,texture。当纹理单元只有一个时，我们可以不用对uniform sampler2D进行赋值，他会默认指定纹理单元为1，但当纹理不止一个时，我们需要指定纹理单元，也就是上面的rtshader->setInt("texture1", index1, 1)等;
+
+###### （3）
