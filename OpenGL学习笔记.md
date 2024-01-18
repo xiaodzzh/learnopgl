@@ -1,3 +1,7 @@
+---
+
+---
+
 # OpenGL学习笔记
 
 #### 1.你好，窗口
@@ -126,14 +130,14 @@ int main(int argc, char* argv[])
 
 渲染一个三角形流程：定义VAO,VBO,EBO->绑定VAO,VBO,EBO->解绑->再绑定不同的VAO,VBO,EBO->渲染
 
-###### （1）定义VAO
+##### （1）定义VAO
 
 ```
 unsigned int VAOS[2];
 glGenVertexArrays(2, VAOS);
 ```
 
-###### （2）定义VBO,EBO
+##### （2）定义VBO,EBO
 
 ```
 unsigned int VBOS[2];
@@ -142,7 +146,7 @@ unsigned int EBO;
 glGenBuffers(1, &EBO);
 ```
 
-###### （3）绑定
+##### （3）绑定
 
 ```
 glBindVertexArray(VAO[0]);
@@ -157,7 +161,7 @@ glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), (void*)0);
 glEnableVertexAttribArray(0);
 ```
 
-###### （4）索引绑定
+##### （4）索引绑定
 
 ```
 glBindVertexArray(VAO[1]);
@@ -170,14 +174,14 @@ glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), (void*)0);
 glEnableVertexAttribArray(0);
 ```
 
-###### （5）解绑
+##### （5）解绑
 
 ```
 glBindBuffer(GL_ARRAY_BUFFER, 0);
 glBindVertexArray(0);
 ```
 
-###### （6）渲染
+##### （6）渲染
 
 ```
 glBindVertexArray(VAO[0]);
@@ -190,13 +194,13 @@ glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 #### 3.着色器
 
-###### （1）shader类型
+##### （1）shader类型
 
 ​	顶点着色器，片段着色器(分别简写为vshader,fshader)
 
 ​	vshader负责将顶点属性作为输入进行变换然后传递给GPU，fshader负责控制颜色。
 
-###### （2）shader常用语法
+##### （2）shader常用语法
 
 ```
 in vec3 my_color;#作为输入
@@ -205,7 +209,7 @@ uniform vec3 uni_color;#类似于变量，可以通过程序改变
 layout (location = 0) in vec3 aPos;#将顶点属性aPos放到位置0处
 ```
 
-###### （3）一个简单的Shader
+##### （3）一个简单的Shader
 
 ```
 #version 330 core
@@ -221,7 +225,7 @@ void main()
 };
 ```
 
-###### （4）如何使用Shader
+##### （4）如何使用Shader
 
 ​	编译着色器->创建着色器程序->链接->使用着色器程序->删除着色器
 
@@ -243,13 +247,13 @@ glDeleteShader(vshader);
 glDeleteShader(fshader);
 ```
 
-###### （5）不同的物体使用不同的着色器绘制时
+##### （5）不同的物体使用不同的着色器绘制时
 
 ​	先使用着色器程序再绘制，否则绘制的是最近的那个着色器程序。
 
 #### 4.纹理
 
-###### （1）添加纹理流程
+##### （1）添加纹理流程
 
 ​	创建纹理->绑定纹理->设置纹理->生成纹理->使用纹理
 
@@ -296,7 +300,7 @@ rtshader->setInt("texture1", index1, 1);
 rtshader->setInt("texture2", index2, 1);
 ```
 
-###### （2）纹理单元
+##### （2）纹理单元
 
 ​	一个物体可能不止拥有一个纹理，如果当一个物体设置了多个纹理的时候，就需要用到纹理单元，首先来看下使用纹理的片段着色器shader:
 
@@ -316,4 +320,64 @@ void main()
 
 ​	我们定义了两个纹理单元texture1,texture。当纹理单元只有一个时，我们可以不用对uniform sampler2D进行赋值，他会默认指定纹理单元为1，但当纹理不止一个时，我们需要指定纹理单元，也就是上面的rtshader->setInt("texture1", index1, 1)等;
 
-###### （3）
+#### 5.变换
+
+##### （1）向量
+
+###### 	1.1 向量点乘
+
+​	点乘用来求两个向量间的余弦值，通常在计算光照时用到。
+
+<img src="./resources/notes/dot.jpg" style="zoom:67%;" />
+
+###### 	1.2向量叉乘
+
+​	叉乘用于求两个不平行向量的共同正交向量，通常用于求法线向量。
+
+<img src=".\resources\notes\cross.jpg" style="zoom:67%;" />
+
+##### （2）矩阵
+
+###### 	1.1矩阵相乘
+
+<img src="./resources/notes/matrix_product.jpg" style="zoom:67%;" />
+
+###### 	1.2矩阵与向量相乘
+
+​	单位矩阵：
+
+<img src="./resources/notes/unit_matrix.jpg" style="zoom:67%;" />
+
+###### 	1.3缩放
+
+<img src="./resources/notes/zoom.jpg" style="zoom:67%;" />
+
+###### 	1.4平移
+
+<img src="./resources/notes/translate.jpg" style="zoom:67%;" />
+
+###### 	1.5齐次坐标
+
+​	首先齐次坐标值第四行的坐标，它使我们的矩阵从本来的3x3矩阵变成了4x4矩阵。为什么会用到齐次坐标呢？
+
+​	解决平移的问题：当矩阵与向量相乘时，3x3的矩阵乘以(x y z)没有问题，但当进行平移时，我们会发现z方向没地方平移了，所以我们增加了齐次坐标来满足矩阵的平移同时兼具矩阵的放大缩小。
+
+###### 	1.6旋转
+
+<img src="./resources/notes/rotate.jpg" style="zoom:67%;" />
+
+​	绕任意旋转轴(Rx,Ry,Rz)旋转：
+
+<img src="./resources/notes/anyaxis.jpg" style="zoom:67%;" />
+
+###### 	1.7矩阵的组合
+
+​	我们想把一个矩阵先放大两倍，然后再平移，这时候就用到了矩阵的组合。注意：在平移和缩放时，我们应该先缩放再平移，不然先平移再缩放的话，平移的距离也被缩放了
+
+​	但在代码中，顺序应该跟其相反。
+
+##### （3）思考
+
+​	当我们设置视口大小不一致的时候，比如设置glfwCreateWindow(1600, 800, "learnOpenGL", NULL, NULL);viewport也与其一致，如果我们想要一个正方形的物体，顶点坐标应该怎么设置呢？如果对这个物体进行缩放，旋转，平移，是否是按照传统的移动几格x,y就加几，还是应该对其进行特殊操作呢？
+
+​	结论:首先，如果后续没有几何变换，设置顶点坐标时就需对x,y进行变换使其单位向量相同。其次当缩放时，不影响，但当平移旋转时，我们需要对其进行操作满足对应的要求。
