@@ -418,4 +418,106 @@ void main()
 
 ###### 2.2观察矩阵
 
-​	用于世界空间转观察空间这一阶段，通过设置观察矩阵我们可以
+​	用于世界空间转观察空间这一阶段，通过设置观察矩阵我们可以将物体相对我们的相机满足我们想要的一个视角范围
+
+###### 2.3投影矩阵
+
+​	用于观察空间转到裁剪空间，我们要将坐标裁剪到指定范围内，不在范围的坐标不予显示，这就需要用到投影矩阵。投影矩阵分为正射投影，透视投影。正射投影的w分量一直为1导致透视除法没有变化，效果就是无论远近都是一样的效果，透视摄影则通过改变w分量实现透视除法达到远近的效果
+
+##### （3）Z缓冲（深度测试）
+
+​	openGL所有深度信息存储在Z缓冲中，当我们开启深度测试后，我们会将Z缓冲与片段的深度信息做对比，如果当前片段在其他片段后面，我们则舍弃它，不再对该片段输出颜色，否则对其覆盖。
+
+​	如何开启及如何使用：
+
+```
+glEnable(GL_DEPTH_TEST);//启用深度测试，默认是关闭的
+
+//每次渲染前清楚深度缓冲，否则之前的残留
+while(...)
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+```
+
+#### 7.摄像机
+
+##### （1）LookAt矩阵
+
+​	通过这个矩阵我们可以将坐标变换到我们想要的观察空间中，首先LookAt矩阵由三个轴确定，方向轴，up轴和右轴，一张图片告诉我们怎么确定LookAt的三个轴：
+​	<img src="./resources/notes/lookat.png" style="zoom:67%;" />
+
+​	确定方向轴->定义一个up轴(相对世界空间)->向量叉乘得出右轴
+
+​	得出LookAt矩阵如下图:
+
+<img src="./resources/notes/lookmatrix.png" style="zoom:67%;" />
+
+​	创建LookAt封装好的代码如下：
+
+```
+glm::mat4 view;
+//第一个向量代表相机所处位置，第二个代表观察哪个点，他们两个用来确定方向轴，第三个向量代表上轴
+view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), 
+           glm::vec3(0.0f, 0.0f, 0.0f), 
+           glm::vec3(0.0f, 1.0f, 0.0f));
+```
+
+##### （2）视角移动
+
+​	欧拉角分为俯仰角(pitch)，偏航角(Yaw), 滚转角(roll)。俯仰角代表从上往下看的角，偏航角代表从左往右看的角，滚转角代表如何滚转摄像机，对于自己的摄像机系统我们只关心俯仰偏航角，下面一张图可以代表三个欧拉角的含义：
+
+<img src="./resources/notes/oula.png" style="zoom:67%;" />
+
+​	我们通过设置LookAt矩阵的方向向量来控制相机的视角，相机的位置我们是知道的，所以我们需要确定起点的位置即观察目标的位置，如何获得呢？下面这张图可以帮助我们很好的理解：
+
+<img src="./resources/notes/pitch.png" style="zoom:67%;" />
+
+​	从图中可以很好的确定起点位置为（x,y,z）
+
+​	至此，我们的视角也确定好了，根据设置不同的俯仰，偏航角我们也能设置不同的视角。代码如下:
+
+```
+static glm::vec3 campos = glm::vec3(0.0f, 0.0f, 3.0f);
+viewt = glm::lookAt(campos, campos + cammove, glm::vec3(0.0f, 1.0f, 0.0f));
+
+static float pitch = 0;
+static float yaw = -90.0f;//结合上面那张图我们就知道为什么初始要设初始pitch为0，yaw为-90了.它可以让我们摄像机对准z轴负方向观看
+
+void mouse_callback(GLFWwindow* window, double x, double y)
+{
+	if (firstMouse)
+	{
+		lastx = x;
+		lasty = y;
+		firstMouse = false;
+	}
+
+	float xoffset, yoffset;
+	float sensitivity = 0.1f;
+	xoffset = x - lastx;
+	//鼠标相对于窗口左上角的位置，所以需要将y - lasty 取反
+	yoffset = lasty - y;
+	//std::cout << yoffset << std::endl;
+	lastx = x;
+	lasty = y;
+
+	pitch += yoffset*sensitivity;
+
+	yaw += xoffset*sensitivity;
+
+	if (pitch > 89.0f)
+	{
+		pitch = 89.0f;
+	}
+	else if (pitch < -89.0f)
+	{
+		pitch = -89.0f;
+	}
+
+	cammove[0] = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+	cammove[1] = sin(glm::radians(pitch));
+	cammove[2] = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+}
+```
+

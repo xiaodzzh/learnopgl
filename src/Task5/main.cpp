@@ -17,6 +17,66 @@
 #define  SCREEN_WIDTH 2000
 #define  SCREEN_HEIGHT 1000
 
+static float lastx;
+static float lasty;
+
+bool firstMouse = true;
+
+static float pitch = 0;
+static float yaw = -90.0f;
+
+static float fov = 45.0f;
+
+static glm::vec3 cammove = glm::vec3(0.0f);
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	if (fov >= 1.0f && fov <= 45.0f)
+		fov -= yoffset;
+	if (fov <= 1.0f)
+		fov = 1.0f;
+	if (fov >= 45.0f)
+		fov = 45.0f;
+}
+
+//定义鼠标移动回调事件
+void mouse_callback(GLFWwindow* window, double x, double y)
+{
+	if (firstMouse)
+	{
+		lastx = x;
+		lasty = y;
+		firstMouse = false;
+	}
+
+	float xoffset, yoffset;
+	float sensitivity = 0.1f;
+	xoffset = static_cast<float>(x) - lastx;
+	//鼠标相对于窗口左上角的位置，所以需要将y - lasty 取反
+	yoffset = lasty - static_cast<float>(y);
+	//std::cout << yoffset << std::endl;
+	lastx = x;
+	lasty = y;
+
+	pitch += yoffset*sensitivity;
+
+	yaw += xoffset*sensitivity;
+
+	if (pitch > 89.0f)
+	{
+		pitch = 89.0f;
+	}
+	else if (pitch < -89.0f)
+	{
+		pitch = -89.0f;
+	}
+
+	cammove[0] = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+	cammove[1] = sin(glm::radians(pitch));
+	cammove[2] = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+	//cammove = glm::normalize(cammove);
+}
+
 #if 1
 
 int main(int argc, char*argv[])
@@ -315,6 +375,12 @@ int main(int argc, char*argv[])
 		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
+	//设置回调事件
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
 	while (!glfwWindowShouldClose(window))
 	{
 		// Start the Dear ImGui frame 启动IMgui Frame框架.
@@ -469,7 +535,7 @@ int main(int argc, char*argv[])
 
 		//设置投影变换
 		glm::mat4 projection = glm::mat4(1.0f);
-		projection = glm::perspective(glm::radians(45.0f), float(SCREEN_WIDTH / SCREEN_HEIGHT), 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(fov), float(SCREEN_WIDTH / SCREEN_HEIGHT), 0.1f, 100.0f);
 		rtshader->setMatrix("projection", projection);
 
 		//glBindVertexArray(VAO[1]);
@@ -528,9 +594,59 @@ int main(int argc, char*argv[])
 		modelt = glm::scale(modelt, glm::vec3(f, f, f));
 		rtshader3->setMatrix("model", modelt);
 
-		//设置view变换矩阵
 		glm::mat4 viewt = glm::mat4(1.0f);
+#if 0
+		//简单的设置一个view变换矩阵
 		viewt = glm::translate(viewt, glm::vec3(0, 0, -3.0f));
+#elif 0
+		//通过设置lookat矩阵来实现view矩阵
+		float radius = 10.0f;
+		float camX = sin(glfwGetTime()) * radius;
+		float camZ = cos(glfwGetTime()) * radius;
+		viewt = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+#elif 1
+		//不同计算机可能每次绘制所需的时间不同，如果我们让计算机每次渲染移动固定的距离为固定值，则假如1s内，
+		//渲染快的计算机移动的更快，这会导致不同计算机的效果不一样，因此我们要保证相同时间内都移动同样的距离
+		static float movespeed = 0.0f;
+		static float lastFrame = 0.0f;
+		static glm::vec3 campos = glm::vec3(0.0f, 0.0f, 3.0f);
+		glm::vec3 tt = campos + cammove;
+		viewt = glm::lookAt(campos, tt, glm::vec3(0.0f, 1.0f, 0.0f));
+		float currentFrame = glfwGetTime();
+		movespeed = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+		//设置按键事件来控制摄像机视角
+		if (glfwGetKey(window, GLFW_KEY_S))
+		{
+			cammove[1] += movespeed;
+			campos[1] += movespeed;
+		}
+		else if (glfwGetKey(window, GLFW_KEY_W))
+		{
+			cammove[1] -= movespeed;
+			campos[1] -= movespeed;
+		}
+		else if (glfwGetKey(window, GLFW_KEY_A))
+		{
+			cammove[0] += movespeed;
+			campos[0] += movespeed;
+		}
+		else if (glfwGetKey(window, GLFW_KEY_D))
+		{
+			cammove[0] -= movespeed;
+			campos[0] -= movespeed;
+		}
+		else if (glfwGetKey(window, GLFW_KEY_Q))
+		{
+			cammove[2] -= movespeed;
+			campos[2] -= movespeed;
+		}
+		else if (glfwGetKey(window, GLFW_KEY_E))
+		{
+			cammove[2] += movespeed;
+			campos[2] += movespeed;
+		}
+#endif
 		rtshader3->setMatrix("view", viewt);
 
 		//设置投影变换
@@ -538,7 +654,7 @@ int main(int argc, char*argv[])
 #if 0
 		projectiont = glm::ortho(0.0f, 400.0f, 0.0f, 200.0f, 0.1f, 10.0f);
 #elif 1
-		projectiont = glm::perspective(glm::radians(45.0f), float(SCREEN_WIDTH) / float(SCREEN_HEIGHT), 0.1f, 100.0f);
+		projectiont = glm::perspective(glm::radians(fov), float(SCREEN_WIDTH) / float(SCREEN_HEIGHT), 0.1f, 100.0f);
 #endif
 		
 		rtshader3->setMatrix("projection", projectiont);
