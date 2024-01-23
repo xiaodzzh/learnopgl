@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include "CShader.h"
+#include "camera.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "glm/glm.hpp"
@@ -17,6 +18,8 @@
 #define  SCREEN_WIDTH 2000
 #define  SCREEN_HEIGHT 1000
 
+bool boolx = false;
+bool booly = false;
 static float lastx;
 static float lasty;
 
@@ -24,11 +27,50 @@ bool firstMouse = true;
 
 static float pitch = 0;
 static float yaw = -90.0f;
-
 static float fov = 45.0f;
 
-static glm::vec3 cammove = glm::vec3(0.0f);
+static glm::vec3 cammove = glm::vec3(0.0f, 0.0f, -1.0f);
 
+Camera camera = Camera(glm::vec3(0.0f, 0.0f, 6.0f));
+
+glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+
+unsigned int loadTexture(char const * path)
+{
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+
+	int width, height, nrComponents;
+	unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+	if (data)
+	{
+		GLenum format;
+		if (nrComponents == 1)
+			format = GL_RED;
+		else if (nrComponents == 3)
+			format = GL_RGB;
+		else if (nrComponents == 4)
+			format = GL_RGBA;
+
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
+	}
+	else
+	{
+		std::cout << "Texture failed to load at path: " << path << std::endl;
+		stbi_image_free(data);
+	}
+
+	return textureID;
+}
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
@@ -123,47 +165,47 @@ int main(int argc, char*argv[])
 	};
 
 	float vertices2[] = {
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-		0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f, 0.0f, -1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f, 0.0f, -1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f, 0.0f, -1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f,
 
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-		0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-		0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
 
-		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f, -1.0f, 0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, -1.0f, 0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, -1.0f, 0.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f, -1.0f, 0.0f, 0.0f,
 
-		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
 
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f, -1.0f, 0.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 0.0f, -1.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, -1.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, -1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.0f, -1.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f, -1.0f, 0.0f,
 
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f
 	};
 
 	unsigned int indices[] = { 0,1,3,1,2,3 };
@@ -249,8 +291,8 @@ int main(int argc, char*argv[])
 	stbi_set_flip_vertically_on_load(true);
 
 	//VAO顶点数组对象创建
-	unsigned int VAO[3];
-	glGenVertexArrays(3, VAO);
+	unsigned int VAO[4];
+	glGenVertexArrays(4, VAO);
 
 	//VBO顶点缓冲对象创建
 	unsigned int VBO[3];
@@ -258,49 +300,14 @@ int main(int argc, char*argv[])
 	unsigned int EBO;
 	glGenBuffers(1, &EBO);
 
-	//创建纹理
-	unsigned int textures[2];
-	glGenTextures(2, textures);
-	glBindTexture(GL_TEXTURE_2D, textures[0]);
-	// 为当前绑定的纹理对象设置环绕、过滤方式
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// 加载并生成纹理
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	int width, height, nrChannels;
-	unsigned char *data = stbi_load("./39_2.jpg", &width, &height, &nrChannels, 0);
-	if (data)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(data);
 
-	glBindTexture(GL_TEXTURE_2D, textures[1]);
-	// 为当前绑定的纹理对象设置环绕、过滤方式
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	// 加载并生成纹理
-	int width1, height1, nrChannels1;
-	unsigned char *data1 = stbi_load("./39.jpg", &width1, &height1, &nrChannels1, 0);
-	if (data)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width1, height1, 0, GL_RGB, GL_UNSIGNED_BYTE, data1);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(data1);
+	//创建纹理
+	unsigned int textures[4];
+	textures[0] = loadTexture("./39.jpg");
+	textures[1] = loadTexture("./39_2.jpg");
+	textures[2] = loadTexture("./fs4.png");
+	textures[3] = loadTexture("./39_1.jpg");
 
 	glBindVertexArray(VAO[0]);
 	//缓冲类型绑定
@@ -318,6 +325,16 @@ int main(int argc, char*argv[])
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
+#if 1 //绑定光源
+	glBindVertexArray(VAO[3]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(GL_FLOAT), (void*)0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(GL_FLOAT), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+#endif
 
 	//绑定矩形顶点属性
 	glBindVertexArray(VAO[1]);
@@ -348,11 +365,14 @@ int main(int argc, char*argv[])
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
 
 	//设置顶点属性指针
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GL_FLOAT), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GL_FLOAT), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void*)(5 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
@@ -377,10 +397,21 @@ int main(int argc, char*argv[])
 	};
 
 	//设置回调事件
-	glfwSetCursorPosCallback(window, mouse_callback);
+	//glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	CShader* rtshader = new CShader("./rtvshader.vs", "./rtfshader.fs");
+	CShader* objectshader = new CShader("./objectvert.vs", "./objectfrag.fs");
+	CShader* lightshader = new CShader("./lightvert.vs", "./lightfrag.fs");
+
+	ImVec4 pLightcolor = { 1.0f,1.0f,1.0f, 1.0f };
+	ImVec4 pObjectcolor = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+
+
+	bool useTexture[1] = { true };
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -402,11 +433,26 @@ int main(int argc, char*argv[])
 			ImGui::SliderFloat("scale", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
 			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
+			ImGui::Text("light");
+			ImGui::ColorEdit3("", (float*)&pLightcolor);
+
+			ImGui::Text("object");
+			ImGui::ColorEdit3("1", (float*)&pObjectcolor);
+
 			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
 				counter++;
 			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
+			if (counter % 2 != 0)
+			{
+				ImGui::Text("use texture");
+				useTexture[0] = true;
+			}
+			else
+			{
+				ImGui::Text(("not use texture"));
+				useTexture[0] = false;
+			}
+			objectshader->setBool("useTexture", useTexture, 1);
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 			ImGui::End();
 		}
@@ -420,6 +466,7 @@ int main(int argc, char*argv[])
 		glfwPollEvents();
 
 		glClearColor(0.2f, 0.1f, 0.3f, 1.00f);
+		//glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #if 0
@@ -473,8 +520,54 @@ int main(int argc, char*argv[])
 		//glBindVertexArray(0);
 #endif
 
-#if 1
-		CShader* rtshader = new CShader("./rtvshader.vs", "./rtfshader.fs");
+#if 1 //绘制光源
+		{
+			lightshader->use();
+			//设置model变换矩阵
+			glm::mat4 model = glm::mat4(1.0f);
+			lightPos.x = !boolx ? lightPos.x + 0.02f : lightPos.x - 0.02f;
+			lightPos.y = !booly ? lightPos.y + 0.01f : lightPos.y - 0.01f;
+			if (lightPos.x > 3)
+			{
+				boolx = true;
+			}
+			if (lightPos.x < -3)
+			{
+				boolx = false;
+			}
+			if (lightPos.y > 2)
+			{
+				booly = true;
+			}
+			if (lightPos.y < -2)
+			{
+				booly = false;
+			}
+			model = glm::translate(model, glm::vec3(lightPos));
+			
+			model = glm::scale(model, glm::vec3(0.5f));
+			lightshader->setMatrix("model", model);
+
+			//设置view变换矩阵
+			glm::mat4 view = camera.GetViewMatrix();
+			//view = glm::translate(view, glm::vec3(0, 0, -3.0f));
+			lightshader->setMatrix("view", view);
+
+			//设置投影变换
+			glm::mat4 projection = glm::mat4(1.0f);
+			projection = glm::perspective(glm::radians(camera.Zoom), float(SCREEN_WIDTH / SCREEN_HEIGHT), 0.1f, 100.0f);
+			lightshader->setMatrix("projection", projection);
+
+			float pOutLightcolor[3] = { pLightcolor.x, pLightcolor.y, pLightcolor.z };
+			lightshader->setFloat("outLightcolor", pOutLightcolor, 3);
+
+			glBindVertexArray(VAO[3]);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+		}
+#endif
+
+#if 0
+		
 		rtshader->use();
 		float float4[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
 		rtshader->setFloat("clear_color", float4, 4);
@@ -484,10 +577,13 @@ int main(int argc, char*argv[])
 		float rtcolor2[2] = { rtofs, cos(rttimeValue1) };
 		rtshader->setFloat("offset", rtcolor2, 2);
 #endif
+#if 0
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textures[0]);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, textures[1]);
+#endif
+		
 
 #if 0
 		seed[0] = abs(sin(rttimeValue1 / 6));
@@ -508,8 +604,8 @@ int main(int argc, char*argv[])
 		rtshader->setFloat("mixseed", seed, 2);
 		int index1[1] = { 0 };
 		int index2[1] = { 1 };
-		rtshader->setInt("texture1", index1, 1);
-		rtshader->setInt("texture2", index2, 1);
+		//rtshader->setInt("texture1", index1, 1);
+		//rtshader->setInt("texture2", index2, 1);
 
 		float timeValue = glfwGetTime();
 		float trslWidth;
@@ -530,13 +626,13 @@ int main(int argc, char*argv[])
 		rtshader->setMatrix("model", model);
 
 		//设置view变换矩阵
-		glm::mat4 view = glm::mat4(1.0f);
-		view = glm::translate(view, glm::vec3(0, 0, -3.0f));
+		glm::mat4 view = camera.GetViewMatrix();
+		//view = glm::translate(view, glm::vec3(0, 0, -3.0f));
 		rtshader->setMatrix("view", view);
 
 		//设置投影变换
 		glm::mat4 projection = glm::mat4(1.0f);
-		projection = glm::perspective(glm::radians(fov), float(SCREEN_WIDTH / SCREEN_HEIGHT), 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(camera.Zoom), float(SCREEN_WIDTH / SCREEN_HEIGHT), 0.1f, 100.0f);
 		rtshader->setMatrix("projection", projection);
 
 		//glBindVertexArray(VAO[1]);
@@ -544,16 +640,20 @@ int main(int argc, char*argv[])
 
 //--------------------------------------------绘制立方体---------------------------------------------
 #if 1
-		CShader* rtshader3 = new CShader("./vshader3.vs", "./fshader3.fs");
-		rtshader3->use();
-		float float4t[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-		rtshader3->setFloat("clear_color", float4t, 4);
+		objectshader->use();
 
 #endif
+#if 1
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textures[0]);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, textures[1]);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, textures[2]);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, textures[3]);
+#endif
+		
 
 #if 0
 		seed[0] = abs(sin(rttimeValue1 / 6));
@@ -561,39 +661,51 @@ int main(int argc, char*argv[])
 		if (glfwGetKey(window, GLFW_KEY_UP))
 		{
 			seed[0] = seed[0] > 1 ? 1 : seed[0] + 0.01;
-			rtshader3->setFloat("mixseed", seed, 2);
+			objectshader->setFloat("mixseed", seed, 2);
 		}
 		else if (glfwGetKey(window, GLFW_KEY_DOWN))
 		{
 			seed[0] = seed[0] < 0 ? 0 : seed[0] - 0.01;
-			rtshader3->setFloat("mixseed", seed, 2);
+			objectshader->setFloat("mixseed", seed, 2);
 		}
 #endif
 
 
-		rtshader3->setFloat("mixseed", seed, 2);
+		objectshader->setFloat("mixseed", seed, 2);
 		int index1t[1] = { 0 };
 		int index2t[1] = { 1 };
-		rtshader3->setInt("texture1", index1t, 1);
-		rtshader3->setInt("texture2", index2t, 1);
+		int index3t[1] = { 2 };
+		int index4t[1] = { 3 };
+		objectshader->setInt("texture1", index1t, 1);
+		objectshader->setInt("texture2", index2t, 1);
 
 		float timeValuet = glfwGetTime();
 		float trslWidtht;
+		objectshader->setInt("material.diffuse", index1t, 1);
+		objectshader->setInt("material.specular", index2t, 1);
+		objectshader->setInt("material.emsion", index3t, 1);
+		objectshader->setInt("material.diftexture", index4t, 1);
 #if 1
 		trslWidtht = (sin(timeValuet));
 #elif 0
 		trslWidtht = 0.1f;
 #endif
+		objectshader->setFloat("light.constant", 1.0f);
+		objectshader->setFloat("light.linear", 0.09f);
+		objectshader->setFloat("light.quadratic", 0.032f);
 
-
+		objectshader->setVec3("light.position", camera.Position);
+		objectshader->setVec3("light.direction", camera.Front);
+		objectshader->setFloat("light.cutOff", glm::cos(glm::radians(25.5f)));
+		objectshader->setFloat("light.outterOff", glm::cos(glm::radians(30.f)));
 		//f = abs(trslWidth);
 
 		//设置model变换矩阵
 		glm::mat4 modelt = glm::mat4(1.0f);
 		//model = glm::translate(model, glm::vec3(trslWidth, -trslWidth, 0));
-		modelt = glm::rotate(modelt, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
+		//modelt = glm::rotate(modelt, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
 		modelt = glm::scale(modelt, glm::vec3(f, f, f));
-		rtshader3->setMatrix("model", modelt);
+		objectshader->setMatrix("model", modelt);
 
 		glm::mat4 viewt = glm::mat4(1.0f);
 #if 0
@@ -610,9 +722,10 @@ int main(int argc, char*argv[])
 		//渲染快的计算机移动的更快，这会导致不同计算机的效果不一样，因此我们要保证相同时间内都移动同样的距离
 		static float movespeed = 0.0f;
 		static float lastFrame = 0.0f;
-		static glm::vec3 campos = glm::vec3(0.0f, 0.0f, 3.0f);
+		static glm::vec3 campos = glm::vec3(0.0f, 0.0f, 10.0f);
 		glm::vec3 tt = campos + cammove;
 		viewt = glm::lookAt(campos, tt, glm::vec3(0.0f, 1.0f, 0.0f));
+		viewt = camera.GetViewMatrix();
 		float currentFrame = glfwGetTime();
 		movespeed = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -648,7 +761,7 @@ int main(int argc, char*argv[])
 			campos[2] += movespeed;
 		}
 #endif
-		rtshader3->setMatrix("view", viewt);
+		objectshader->setMatrix("view", viewt);
 
 		//设置投影变换
 		glm::mat4 projectiont = glm::mat4(1.0f);
@@ -658,7 +771,7 @@ int main(int argc, char*argv[])
 		projectiont = glm::perspective(glm::radians(fov), float(SCREEN_WIDTH) / float(SCREEN_HEIGHT), 0.1f, 100.0f);
 #endif
 		
-		rtshader3->setMatrix("projection", projectiont);
+		objectshader->setMatrix("projection", projectiont);
 
 
 		//glBindVertexArray(VAO[2]);
@@ -668,10 +781,40 @@ int main(int argc, char*argv[])
 			glBindVertexArray(VAO[2]);
 			glm::mat4 modelt1 = glm::mat4(1.0f);
 			float angle = i;
-			modelt1 = glm::translate(modelt1, glm::vec3(sin(glfwGetTime()) + cubePositions[i][0], -sin(glfwGetTime()) + cubePositions[i][1], 0.0f + cubePositions[i][2]));
-			modelt1 = glm::rotate(modelt1, (float)(sin(glfwGetTime())* 3.14), glm::vec3(float(angle) / 10.0f, 1.0f -float(angle) / 10.0f, 1.0f));
-			modelt1 = glm::scale(modelt1, glm::vec3(f, f, f));
-			rtshader3->setMatrix("model", modelt1);
+			modelt1 = glm::translate(modelt1, cubePositions[i]/*glm::vec3(sin(glfwGetTime()) + cubePositions[i][0], -sin(glfwGetTime()) + cubePositions[i][1], 0.0f + cubePositions[i][2])*/);
+			//modelt1 = glm::rotate(modelt1, (float)(sin(glfwGetTime()) * 0.20)/*0.0f*/, glm::vec3(float(angle) / 10.0f, 1.0f -float(angle) / 10.0f, 1.0f));
+			//modelt1 = glm::scale(modelt1, glm::vec3(f, f, f));
+			objectshader->setMatrix("model", modelt1);
+
+			glm::vec3 diffuseColor = glm::vec3(pLightcolor.x, pLightcolor.y, pLightcolor.z)  * glm::vec3(0.5f); // 降低影响
+			glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // 很低的影响
+			float pdiffuse[3] = { diffuseColor.x, diffuseColor.y, diffuseColor.z };
+			float pambient[3] = { ambientColor.x, ambientColor.y, ambientColor.z };
+			float pspe[3] = { 1.0,1.0,1.0 };
+			objectshader->setFloat("light.ambient", pambient, 3);
+			objectshader->setFloat("light.diffuse", pdiffuse, 3);
+			objectshader->setFloat("light.specular", pspe, 3);
+
+			// material properties
+			glm::vec3 objectdiffuseColor = glm::vec3(pObjectcolor.x, pObjectcolor.y, pObjectcolor.z); // 降低影响
+			float pobjdiffuse[3] = { objectdiffuseColor.x, objectdiffuseColor.y, objectdiffuseColor.z };
+			float pobjambient[3] = { objectdiffuseColor.x * 0.1, objectdiffuseColor.y * 0.1, objectdiffuseColor.z * 0.1 };
+			float pobjspe[3] = { 0.5f,0.5f,0.5f };
+			float pobjshin[1] = { 32.0f };
+			//objectshader->setFloat("material.ambient", pobjambient, 3);
+			//objectshader->setFloat("material.diffuse", pobjdiffuse, 3);
+			//objectshader->setFloat("material.specular", pobjspe, 3); // specular lighting doesn't have full effect on this object's material
+			objectshader->setFloat("material.shininess", pobjshin, 1);
+
+
+			/*float pTlight[3] = { pLightcolor.x, pLightcolor.y, pLightcolor.z };
+			float pTobject[3] = { pObjectcolor.x, pObjectcolor.y, pObjectcolor.z };
+			objectshader->setFloat("light_color", pTlight, 3);
+			objectshader->setFloat("object_color", pTobject, 3);*/
+			float pLightPos[3] = { lightPos.x, lightPos.y ,lightPos.z };
+			objectshader->setFloat("light.position", pLightPos, 3);
+			float pViewpos[3] = { camera.Position.x, camera.Position.y ,camera.Position.z };
+			objectshader->setFloat("viewPos", pViewpos, 3);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 		

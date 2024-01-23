@@ -195,6 +195,7 @@ set(CHAPTERS
     Task4
     Task5
     Task6
+	lighting
 )
 
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)
