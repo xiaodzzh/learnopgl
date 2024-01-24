@@ -2,6 +2,7 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aTexture;
 layout (location = 2) in vec3 aNormal;
+out vec4 difView;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
@@ -15,4 +16,5 @@ void main()
 	//normal = aNormal;
 	normal = mat3(transpose(inverse(model))) * aNormal;
 	out_texture = aTexture;
+	difView = view * vec4(fragPos, 1.0);
 };

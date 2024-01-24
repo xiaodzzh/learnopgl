@@ -31,9 +31,9 @@ static float fov = 45.0f;
 
 static glm::vec3 cammove = glm::vec3(0.0f, 0.0f, -1.0f);
 
-Camera camera = Camera(glm::vec3(0.0f, 0.0f, 6.0f));
+Camera camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lightPos(0.0f, 0.0f, 4.0f);
 
 unsigned int loadTexture(char const * path)
 {
@@ -56,8 +56,9 @@ unsigned int loadTexture(char const * path)
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		float borderColor[] = { 1.0f, 1.0f, 0.0f, 1.0f };
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -142,7 +143,7 @@ int main(int argc, char*argv[])
 	// Setup Platform/Renderer bindings
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init();
-	ImVec4 clear_color = ImVec4(1.0f, 1.0f, 1.0f, 1.00f);
+	ImVec4 clear_color = ImVec4(0.3f, 0.5f, 0.7f, 1.00f);
 	ImVec4 r_color;
 	ImVec4 g_color;
 	ImVec4 b_color;
@@ -304,10 +305,10 @@ int main(int argc, char*argv[])
 
 	//创建纹理
 	unsigned int textures[4];
-	textures[0] = loadTexture("./39.jpg");
-	textures[1] = loadTexture("./39_2.jpg");
+	textures[0] = loadTexture("./39.png");
+	textures[1] = loadTexture("./39_2.png");
 	textures[2] = loadTexture("./fs4.png");
-	textures[3] = loadTexture("./39_1.jpg");
+	textures[3] = loadTexture("./39.jpg");
 
 	glBindVertexArray(VAO[0]);
 	//缓冲类型绑定
@@ -385,11 +386,11 @@ int main(int argc, char*argv[])
 
 	glm::vec3 cubePositions[] = {
 		glm::vec3(0.0f,  0.0f,  0.0f),
-		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(0.0f,  0.0f, -8.0f),
 		glm::vec3(-1.5f, -2.2f, -2.5f),
-		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(-2.8f, -2.0f, -4.3f),
 		glm::vec3(2.4f, -0.4f, -3.5f),
-		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(-1.7f,  2.3f, -7.5f),
 		glm::vec3(1.3f, -2.0f, -2.5f),
 		glm::vec3(1.5f,  2.0f, -2.5f),
 		glm::vec3(1.5f,  0.2f, -1.5f),
@@ -430,7 +431,7 @@ int main(int argc, char*argv[])
 																	//ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 																	//ImGui::Checkbox("Another Window", &show_another_window);
 
-			ImGui::SliderFloat("scale", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::SliderFloat("scale", &f, 0.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
 			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
 			ImGui::Text("light");
@@ -465,8 +466,8 @@ int main(int argc, char*argv[])
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
-		glClearColor(0.2f, 0.1f, 0.3f, 1.00f);
-		//glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+		//glClearColor(0.2f, 0.1f, 0.3f, 1.00f);
+		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #if 0
@@ -544,7 +545,7 @@ int main(int argc, char*argv[])
 				booly = false;
 			}
 			model = glm::translate(model, glm::vec3(lightPos));
-			
+			camera.Position = lightPos;
 			model = glm::scale(model, glm::vec3(0.5f));
 			lightshader->setMatrix("model", model);
 
@@ -696,8 +697,8 @@ int main(int argc, char*argv[])
 
 		objectshader->setVec3("light.position", camera.Position);
 		objectshader->setVec3("light.direction", camera.Front);
-		objectshader->setFloat("light.cutOff", glm::cos(glm::radians(25.5f)));
-		objectshader->setFloat("light.outterOff", glm::cos(glm::radians(30.f)));
+		objectshader->setFloat("light.cutOff", glm::cos(glm::radians(12.f)));
+		objectshader->setFloat("light.outterOff", glm::cos(glm::radians(15.f)));
 		//f = abs(trslWidth);
 
 		//设置model变换矩阵
@@ -784,6 +785,10 @@ int main(int argc, char*argv[])
 			modelt1 = glm::translate(modelt1, cubePositions[i]/*glm::vec3(sin(glfwGetTime()) + cubePositions[i][0], -sin(glfwGetTime()) + cubePositions[i][1], 0.0f + cubePositions[i][2])*/);
 			//modelt1 = glm::rotate(modelt1, (float)(sin(glfwGetTime()) * 0.20)/*0.0f*/, glm::vec3(float(angle) / 10.0f, 1.0f -float(angle) / 10.0f, 1.0f));
 			//modelt1 = glm::scale(modelt1, glm::vec3(f, f, f));
+			if (i == 1)
+			{
+				modelt1 = glm::scale(modelt1, glm::vec3(f, f, f));
+			}
 			objectshader->setMatrix("model", modelt1);
 
 			glm::vec3 diffuseColor = glm::vec3(pLightcolor.x, pLightcolor.y, pLightcolor.z)  * glm::vec3(0.5f); // 降低影响
