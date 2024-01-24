@@ -196,6 +196,7 @@ set(CHAPTERS
     Task5
     Task6
 	lighting
+	assimp_model
 )
 
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)
