@@ -14,7 +14,7 @@ void main()
 	fragPos = vec3(model * vec4(aPos, 1.0));
     gl_Position = projection * view * vec4(fragPos, 1.0);
 	//normal = aNormal;
-	normal = mat3(transpose(inverse(model))) * aNormal;
+	normal = mat3(transpose(inverse(model))) * aNormal;//将法向量变换到世界坐标下
 	out_texture = aTexture;
 	difView = view * vec4(fragPos, 1.0);
 };

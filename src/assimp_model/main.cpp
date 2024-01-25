@@ -15,17 +15,63 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "learnopengl/filesystem.h"
 
 #define  SCREEN_WIDTH 2000
 #define  SCREEN_HEIGHT 1000
 
-static float fov = 45.0f;
+static float deltaTime = 0.0;
+static float scale = 0.1f;
+static float lastFrame;
+static float currentFrame;
+static float yPos;
+static float fov = 0.0f;
+
+float lastX = SCREEN_WIDTH / 2.0f;
+float lastY = SCREEN_HEIGHT / 2.0f;
+bool firstMouse = true;
+
 
 static glm::vec3 cammove = glm::vec3(0.0f, 0.0f, -1.0f);
 
 Camera camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
-glm::vec3 lightPos(0.0f, 0.0f, 14.0f);
+glm::vec3 lightPos(0.0f, 0.0f, 5.0f);
+void processInput(GLFWwindow* window)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		camera.ProcessKeyboard(FORWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		camera.ProcessKeyboard(BACKWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		camera.ProcessKeyboard(LEFT, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		camera.ProcessKeyboard(RIGHT, deltaTime);
+}
+
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+{
+	float xpos = static_cast<float>(xposIn);
+	float ypos = static_cast<float>(yposIn);
+
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+	lastX = xpos;
+	lastY = ypos;
+
+	camera.ProcessMouseMovement(xoffset, yoffset);
+}
 
 unsigned int loadTexture(char const * path)
 {
@@ -67,12 +113,7 @@ unsigned int loadTexture(char const * path)
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	if (fov >= 1.0f && fov <= 45.0f)
-		fov -= yoffset;
-	if (fov <= 1.0f)
-		fov = 1.0f;
-	if (fov >= 45.0f)
-		fov = 45.0f;
+	camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
 #if 1
@@ -97,7 +138,7 @@ int main(int argc, char*argv[])
 	// Setup Platform/Renderer bindings
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init();
-	ImVec4 clear_color = ImVec4(0.3f, 0.5f, 0.7f, 1.00f);
+	ImVec4 clear_color = ImVec4(1.0f, 1.0f, 1.0f, 1.00f);
 	gladLoadGLLoader(GLADloadproc(glfwGetProcAddress));
 
 #if 0
@@ -122,9 +163,13 @@ int main(int argc, char*argv[])
 
 	glEnable(GL_DEPTH_TEST);
 
+	//glEnable(GL_STENCIL_TEST);
+
 	//设置回调事件
 	//glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	ImVec4 pLightcolor = { 1.0f,1.0f,1.0f, 1.0f };
 	ImVec4 pObjectcolor = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -134,15 +179,19 @@ int main(int argc, char*argv[])
 
 	// load models
 	// -----------
-	CModel ourModel("E:/learnopgl/src/assimp_model/resources/objects/backpack/backpack.obj");
-
+	CModel ourModel(FileSystem::getPath("resources/objects/cat/12221_Cat_v1_l3.obj"));
+	camera.Position = lightPos;
 	while (!glfwWindowShouldClose(window))
 	{
+		currentFrame = static_cast<float>(glfwGetTime());
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
 		// Start the Dear ImGui frame 启动IMgui Frame框架.
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 		static float f = 0.5f;
+		static float out = 1.0f;
 		{
 
 			static int counter = 0;
@@ -152,8 +201,11 @@ int main(int argc, char*argv[])
 			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
 																	//ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 																	//ImGui::Checkbox("Another Window", &show_another_window);
-
-			ImGui::SliderFloat("scale", &f, 0.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::SliderFloat("scale", &scale, 0.0f, 1.0f);
+			ImGui::SliderFloat("inner cutoff", &f, 0.0f, 60.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::SliderFloat("ambient", &out, 0.0f, 1.0f);
+			ImGui::SliderFloat("y", &yPos, -10.0f, 10.0f);
+			camera.Position.y = yPos;
 			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
 			ImGui::Text("light");
@@ -184,12 +236,15 @@ int main(int argc, char*argv[])
 		ImGui::Render();
 		glfwSwapBuffers(window);
 		glfwPollEvents();
-		camera.Position = lightPos;
+
+		processInput(window);
+
 		//glClearColor(0.2f, 0.1f, 0.3f, 1.00f);
 		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		ourShader.use();
+
 
 		// view/projection transformations
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
@@ -199,11 +254,29 @@ int main(int argc, char*argv[])
 
 		// render the loaded model
 		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
-		std::cout << sin(glfwGetTime()) << std::endl;
-		model = glm::rotate(model, (float)(glfwGetTime()), glm::vec3(0.0f,1.0f,0.0f));
+		model = glm::translate(model, glm::vec3(0.0f, -4.0f, 0.0f)); // translate it down so it's at the center of the scene
+		model = glm::scale(model, glm::vec3(scale, scale, scale));	// it's a bit too big for our scene, so scale it down
+		//std::cout << glfwGetTime() << std::endl;
+		//model = glm::rotate(model, (float)(glfwGetTime()), glm::vec3(0.0f,1.0f,0.0f));
 		ourShader.setMat4("model", model);
+
+		ourShader.setFloat("light.constant", 1.0f);
+		ourShader.setFloat("light.linear", 0.09f);
+		ourShader.setFloat("light.quadratic", 0.032f);
+
+		ourShader.setVec3("light.position", camera.Position);
+		ourShader.setVec3("light.direction", camera.Front);
+		ourShader.setFloat("light.cutOff", glm::cos(glm::radians(f)));
+		ourShader.setFloat("light.outterOff", glm::cos(glm::radians(f + 2.5)));
+
+		glm::vec3 diffuseColor = glm::vec3(pLightcolor.x, pLightcolor.y, pLightcolor.z)  * glm::vec3(1.0f); // 降低影响
+		glm::vec3 ambientColor = diffuseColor * glm::vec3(out); // 很低的影响
+		glm::vec3 pspe = glm::vec3(1.0f);
+		ourShader.setVec3("light.ambient", ambientColor);
+		ourShader.setVec3("light.diffuse", diffuseColor);
+		ourShader.setVec3("light.specular", pspe);
+		ourShader.setVec3("viewPos", glm::vec3(camera.Position.x, camera.Position.y, camera.Position.z));
+
 		ourModel.Draw(ourShader);
 
 		//glBindVertexArray(0);
