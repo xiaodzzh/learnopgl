@@ -162,8 +162,11 @@ int main(int argc, char*argv[])
 	unsigned int textures[4];
 
 	glEnable(GL_DEPTH_TEST);
-
-	//glEnable(GL_STENCIL_TEST);
+	glDepthFunc(GL_LESS);
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+	glEnable(GL_CULL_FACE);
 
 	//设置回调事件
 	//glfwSetCursorPosCallback(window, mouse_callback);
@@ -176,10 +179,14 @@ int main(int argc, char*argv[])
 
 
 	CShader ourShader("./modelvert.vs", "./modelfrag.fs");
+	CShader shaderSingleColor("./singlecolor.vs", "./singlecolor.fs");
 
 	// load models
 	// -----------
 	CModel ourModel(FileSystem::getPath("resources/objects/cat/12221_Cat_v1_l3.obj"));
+
+	CModel ourModel1(FileSystem::getPath("resources/objects/cat/12221_Cat_v1_l3.obj"));
+
 	camera.Position = lightPos;
 	while (!glfwWindowShouldClose(window))
 	{
@@ -241,7 +248,7 @@ int main(int argc, char*argv[])
 
 		//glClearColor(0.2f, 0.1f, 0.3f, 1.00f);
 		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 		ourShader.use();
 
@@ -251,6 +258,7 @@ int main(int argc, char*argv[])
 		glm::mat4 view = camera.GetViewMatrix();
 		ourShader.setMat4("projection", projection);
 		ourShader.setMat4("view", view);
+
 
 		// render the loaded model
 		glm::mat4 model = glm::mat4(1.0f);
@@ -277,7 +285,28 @@ int main(int argc, char*argv[])
 		ourShader.setVec3("light.specular", pspe);
 		ourShader.setVec3("viewPos", glm::vec3(camera.Position.x, camera.Position.y, camera.Position.z));
 
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
+
 		ourModel.Draw(ourShader);
+
+
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilMask(0x00);
+		glDisable(GL_DEPTH_TEST);
+		shaderSingleColor.use();
+		float scalec = 1.1f;
+		glm::mat4 modelc = glm::scale(model, glm::vec3(scalec, scalec, scalec));
+		glm::mat4 viewc = camera.GetViewMatrix();
+		glm::mat4 projectionc = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+		shaderSingleColor.setMat4("view", viewc);
+		shaderSingleColor.setMat4("projection", projectionc);
+		shaderSingleColor.setMat4("model", modelc);
+		ourModel1.Draw(shaderSingleColor);
+		glBindVertexArray(0);
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		glEnable(GL_DEPTH_TEST);
 
 		//glBindVertexArray(0);
 		//glfwSwapBuffers(window);
